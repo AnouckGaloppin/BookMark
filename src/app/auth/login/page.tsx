@@ -18,26 +18,38 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     setError(null);
     
+    console.log('Attempting login for:', email);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (signInError) {
+      console.log('Sign in error:', signInError.message);
+    }
+    
     if (signInError && signInError.message.includes('Invalid login credentials')) {
+      console.log('Invalid credentials, attempting signup');
       const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
       if (signUpError) {
+        console.log('Signup error:', signUpError.message);
         setError(signUpError.message);
         setIsLoggingIn(false);
       } else if (data.session) {
+        console.log('Signup successful with session');
         setError(null);
         setLoginCompleted(true);
         // Wait longer for session to sync properly
         await new Promise(resolve => setTimeout(resolve, 500));
         router.push('/profile');
       } else {
+        console.log('Signup successful but no session');
         setError('Signup successful! Auto-login failed. Try logging in.');
         setIsLoggingIn(false);
       }
     } else if (signInError) {
+      console.log('Other sign in error:', signInError.message);
       setError(signInError.message);
       setIsLoggingIn(false);
     } else {
+      console.log('Sign in successful');
       setLoginCompleted(true);
       // Wait longer for session to sync properly
       await new Promise(resolve => setTimeout(resolve, 500));
