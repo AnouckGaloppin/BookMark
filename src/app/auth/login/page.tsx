@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{email?: string, password?: string}>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginCompleted, setLoginCompleted] = useState(false);
   const router = useRouter();
@@ -15,8 +16,32 @@ export default function LoginPage() {
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoggingIn(true);
+    
+    // Clear previous errors
     setError(null);
+    setValidationErrors({});
+    
+    // Validate form
+    const errors: {email?: string, password?: string} = {};
+    
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!password.trim()) {
+      errors.password = 'Password is required';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setIsLoggingIn(true);
     
     console.log('Attempting login for:', email);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
@@ -72,15 +97,18 @@ export default function LoginPage() {
     if (error) setError(error.message);
   };
 
-  useEffect(() => setError(null), [email, password]);
+  useEffect(() => {
+    setError(null);
+    setValidationErrors({});
+  }, [email, password]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-2xl font-bold mb-4 text-center">Log In</h1>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {error && <p className="text-red-500 text-center mb-4" style={{color: 'red'}}>{error}</p>}
         {isLoggingIn && <p className="text-blue-500 text-center mb-4">Logging in...</p>}
-        <form onSubmit={handleEmailLogin} className="space-y-4">
+        <form onSubmit={handleEmailLogin} className="space-y-4" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
@@ -88,9 +116,9 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
-              required
               disabled={isLoggingIn}
             />
+            {validationErrors.email && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{validationErrors.email}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Password</label>
@@ -99,9 +127,9 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
-              required
               disabled={isLoggingIn}
             />
+            {validationErrors.password && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{validationErrors.password}</p>}
           </div>
           <button
             type="submit"

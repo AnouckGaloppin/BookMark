@@ -53,7 +53,7 @@
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
                 disabled={isSubmitting}
               />
-              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
+              {errors.title && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.title.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">ISBN (Optional)</label>
@@ -62,7 +62,7 @@
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
                 disabled={isSubmitting}
               />
-              {errors.isbn && <p className="text-red-500 text-sm mt-1">{errors.isbn.message}</p>}
+              {errors.isbn && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.isbn.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Author (Optional)</label>
@@ -71,7 +71,7 @@
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
                 disabled={isSubmitting}
               />
-              {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author.message}</p>}
+              {errors.author && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.author.message}</p>}
             </div>
             <button
               type="submit"
