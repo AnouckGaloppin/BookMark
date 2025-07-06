@@ -4,7 +4,8 @@ CREATE TABLE books (
   author TEXT,
   isbn VARCHAR(13),
   cover_url TEXT,
-  total_pages INTEGER
+  total_pages INTEGER,
+  user_id UUID REFERENCES auth.users(id)
 );
 CREATE TABLE reading_progress (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
