@@ -11,6 +11,7 @@
       message: 'ISBN must be 10 or 13 digits',
     }),
     author: z.string().optional(),
+    cover_image: z.string().optional(),
   });
 
   type FormData = z.infer<typeof formSchema>;
@@ -23,14 +24,17 @@
       reset,
     } = useForm<FormData>({
       resolver: zodResolver(formSchema),
-      defaultValues: { title: '', isbn: '', author: '' },
+      defaultValues: { title: '', isbn: '', author: '', cover_image: '' },
     });
 
     const onSubmit = async (data: FormData) => {
+        const {data: {user}} = await supabase.auth.getUser();
       const { error } = await supabase.from('books').insert({
         title: data.title,
         isbn: data.isbn,
         author: data.author,
+        cover_image: data.cover_image || null,
+        user_id: user?.id,
       });
 
       if (error) {
@@ -72,6 +76,17 @@
                 disabled={isSubmitting}
               />
               {errors.author && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.author.message}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Cover Image URL (Optional)</label>
+              <input
+                {...register('cover_image')}
+                type="url"
+                placeholder="https://example.com/book-cover.jpg"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
+                disabled={isSubmitting}
+              />
+              {errors.cover_image && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.cover_image.message}</p>}
             </div>
             <button
               type="submit"

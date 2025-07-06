@@ -92,7 +92,9 @@ export default function LoginPage() {
   const handleGitHubLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
-      options: { redirectTo: 'http://localhost:3000/auth/callback' },
+      options: { 
+        redirectTo: `${window.location.origin}/profile` 
+      },
     });
     if (error) setError(error.message);
   };
