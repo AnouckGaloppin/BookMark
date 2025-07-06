@@ -7,10 +7,11 @@
   // Define validation schema
   const formSchema = z.object({
     title: z.string().min(1, 'Title is required'),
+    author: z.string().optional(),
+    total_pages: z.number().min(1, 'Number of pages must be at least 1'),
     isbn: z.string().optional().refine((val) => !val || /^[0-9]{10}$|^[0-9]{13}$/.test(val), {
       message: 'ISBN must be 10 or 13 digits',
     }),
-    author: z.string().optional(),
     cover_image: z.string().optional(),
   });
 
@@ -24,13 +25,14 @@
       reset,
     } = useForm<FormData>({
       resolver: zodResolver(formSchema),
-      defaultValues: { title: '', isbn: '', author: '', cover_image: '' },
+      defaultValues: { title: '', total_pages: 0, isbn: '', author: '', cover_image: '' },
     });
 
     const onSubmit = async (data: FormData) => {
         const {data: {user}} = await supabase.auth.getUser();
       const { error } = await supabase.from('books').insert({
         title: data.title,
+        total_pages: data.total_pages,
         isbn: data.isbn,
         author: data.author,
         cover_image: data.cover_image || null,
@@ -60,15 +62,6 @@
               {errors.title && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.title.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">ISBN (Optional)</label>
-              <input
-                {...register('isbn')}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
-                disabled={isSubmitting}
-              />
-              {errors.isbn && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.isbn.message}</p>}
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700">Author (Optional)</label>
               <input
                 {...register('author')}
@@ -77,6 +70,27 @@
               />
               {errors.author && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.author.message}</p>}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Number of Pages</label>
+              <input
+                {...register('total_pages', { valueAsNumber: true })}
+                type="number"
+                min="1"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
+                disabled={isSubmitting}
+              />
+              {errors.total_pages && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.total_pages.message}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">ISBN (Optional)</label>
+              <input
+                {...register('isbn')}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
+                disabled={isSubmitting}
+              />
+              {errors.isbn && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{errors.isbn.message}</p>}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Cover Image URL (Optional)</label>
               <input
