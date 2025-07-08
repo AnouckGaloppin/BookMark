@@ -8,11 +8,12 @@
      import { AppDispatch } from '@/lib/store';
 
      export default function BooksPage() {
-       const { session, loading } = useAuth();
-       const [books, setBooks] = useState<any[]>([]);
-       const [error, setError] = useState<string | null>(null);
-       const [loadingBooks, setLoadingBooks] = useState(false);
-       const dispatch = useDispatch<AppDispatch>();
+  const { session, loading } = useAuth();
+  const [books, setBooks] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingBooks, setLoadingBooks] = useState(false);
+
+  const dispatch = useDispatch<AppDispatch>();
 
        useEffect(() => {
          if (session?.user) {
@@ -56,6 +57,8 @@
          return <p className="p-4 text-red-500" style={{ color: 'red' }}>{error}</p>;
        }
 
+
+
        if (!books || books.length === 0) {
          return <p className="p-4">No books found.</p>;
        }
@@ -64,6 +67,7 @@
          <div className="min-h-screen bg-gray-50 p-4">
            <div className="max-w-7xl mx-auto">
              <h1 className="text-3xl font-bold mb-6 text-gray-900">Your Books</h1>
+             <a href="/search" className="mb-6 inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Search for Books</a>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                {books.map((book) => (
                  <div key={book.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">

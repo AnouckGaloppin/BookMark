@@ -8,10 +8,11 @@
      import { AppDispatch } from '@/lib/store';
 
      export default function BookDetails({ params }: { params: Promise<{ id: string }> }) {
-       const { id } = use(params);
-       const [book, setBook] = useState<any>(null);
-       const [error, setError] = useState<string | null>(null);
-       const dispatch = useDispatch<AppDispatch>();
+  const { id } = use(params);
+  const [book, setBook] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const dispatch = useDispatch<AppDispatch>();
 
        useEffect(() => {
          const fetchBook = async () => {
@@ -34,6 +35,8 @@
          fetchBook();
          dispatch(loadProgressFromSupabase());
        }, [id, dispatch]);
+
+
 
        if (error) return <p className="p-4 text-red-500">{error}</p>;
        if (!book) return <p className="p-4">Loading...</p>;
