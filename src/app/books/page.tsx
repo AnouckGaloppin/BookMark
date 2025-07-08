@@ -4,21 +4,22 @@
      import { useAuth } from '@/lib/auth';
      import ProgressUpdater from '@/components/ProgressUpdater';
      import { useDispatch } from 'react-redux';
-     import { setProgress } from '@/lib/progressSlice';
+     import { loadProgressFromSupabase } from '@/lib/progressSlice';
+     import { AppDispatch } from '@/lib/store';
 
      export default function BooksPage() {
        const { session, loading } = useAuth();
        const [books, setBooks] = useState<any[]>([]);
        const [error, setError] = useState<string | null>(null);
        const [loadingBooks, setLoadingBooks] = useState(false);
-       const dispatch = useDispatch();
+       const dispatch = useDispatch<AppDispatch>();
 
        useEffect(() => {
          if (session?.user) {
            loadBooks();
-           loadProgress();
+           dispatch(loadProgressFromSupabase());
          }
-       }, [session]);
+       }, [session, dispatch]);
 
        const loadBooks = async() => {
         if(!session?.user) return;
@@ -38,23 +39,6 @@
         }
         setLoadingBooks(false);
       };
-
-       const loadProgress = async () => {
-        if (!session?.user) return;
-
-        const { data: progressData, error: progressError } = await supabase
-        .from('reading_progress')
-        .select('book_id, pages_read')
-        .eq('user_id', session.user.id);
-
-        if (progressError) {
-          console.error('Error loading progress:', progressError.message);
-        } else if (progressData) {
-          progressData.forEach((item) => {
-            dispatch(setProgress({ bookId: item.book_id, pages: item.pages_read || 0 }));
-          });
-        }
-      }
 
        if (loading) {
          return <p className="p-4">Loading...</p>;
@@ -105,6 +89,7 @@
                        <p className="text-gray-600 text-sm">by {book.author}</p>
                      )}
                      <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
+                     <a href={`/book/${book.id}`} className="text-blue-500 hover:text-blue-600">View Details</a>
                    </div>
                  </div>
                ))}

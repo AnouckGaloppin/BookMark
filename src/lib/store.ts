@@ -5,6 +5,12 @@ import { configureStore } from '@reduxjs/toolkit';
     reducer: {
       progress: progressReducer,
     },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: ['persist/PERSIST'],
+        },
+      }),
   });
 
   // Infer the `RootState` and `AppDispatch` types from the store itself
