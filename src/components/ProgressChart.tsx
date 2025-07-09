@@ -10,6 +10,21 @@
     pages_read: number;
   }
 
+  function getLatestProgressPerDay(progressList: { updated_at: string }[]) {
+    // Map: date string (YYYY-MM-DD) -> progress entry
+    const map = new Map();
+    for (const entry of progressList) {
+      const date = new Date(entry.updated_at).toISOString().slice(0, 10); // YYYY-MM-DD
+      if (!map.has(date) || new Date(entry.updated_at) > new Date(map.get(date).updated_at)) {
+        map.set(date, entry);
+      }
+    }
+    // Return sorted by date ascending
+    return Array.from(map.values()).sort((a, b) =>
+      new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+    );
+  }
+
   export default function ProgressChart({ bookId }: { bookId: string }) {
     const [progressData, setProgressData] = useState<ProgressData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -76,7 +91,7 @@
     }
 
     return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-md p-4">
+      <div className="w-full max-w-2xl mx-auto h-96 bg-white rounded-lg shadow-md p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Reading Progress Over Time</h3>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={progressData}>

@@ -138,31 +138,33 @@
           </button>
         </div>
         {editingTotalPages && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-1">Update Total Pages</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={localTotalPages || ''}
-                onChange={handleTotalPagesChange}
-                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                min={pages}
-                placeholder="Total pages"
-              />
+            <input
+              type="number"
+              value={localTotalPages || ''}
+              onChange={handleTotalPagesChange}
+              className="w-full min-w-[120px] mb-3 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              min={pages}
+              placeholder="Total pages"
+            />
+            <div className="flex justify-center gap-3 w-full">
               <button
                 onClick={updateTotalPages}
-                className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                className="px-4 py-1.5 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 shadow-sm hover:shadow-md font-medium"
+                style={{ minWidth: 90 }}
               >
                 Save
               </button>
               <button
                 onClick={toggleEditTotalPages}
-                className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                className="px-4 py-1.5 text-sm bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-colors duration-200 shadow-sm hover:shadow-md font-medium"
+                style={{ minWidth: 90 }}
               >
                 Cancel
               </button>
             </div>
-            {updateError && <p className="text-red-500 text-xs mt-1">{updateError}</p>}
+            {updateError && <p className="text-red-500 text-xs mt-2 text-center">{updateError}</p>}
           </div>
         )}
       </div>
