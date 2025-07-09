@@ -13,12 +13,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !session && pathname !== '/auth/login' && pathname !== '/') {
+    if (!loading && !session && pathname !== '/auth/login' && pathname !== '/auth/register' && pathname !== '/') {
       router.push('/auth/login');
     }
   }, [session, loading, pathname, router]);
 
-  if (loading && pathname !== '/auth/login' && pathname !== '/') {
+  if (loading && pathname !== '/auth/login' && pathname !== '/auth/register' && pathname !== '/') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading...</div>

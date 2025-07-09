@@ -1,4 +1,5 @@
 import { Providers } from './providers';
+import Navigation from '@/components/Navigation';
 import './globals.css';
 
 export const metadata = {
@@ -11,7 +12,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-gray-100">
         <Providers>
-          {children}
+          <Navigation />
+          <main>
+            {children}
+          </main>
         </Providers>
       </body>
     </html>
