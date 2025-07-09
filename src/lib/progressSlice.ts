@@ -16,6 +16,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
        initialState,
        reducers: {
          setProgress: (state, action: PayloadAction<{ bookId: string; pages: number }>) => {
+           console.log('🔄 Redux: setProgress called with', action.payload);
            state.progress[action.payload.bookId] = action.payload.pages;
          },
          updateProgress: (state, action: PayloadAction<{ bookId: string; pages: number }>) => {
@@ -23,6 +24,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
            saveProgressToSupabase(action.payload.bookId, action.payload.pages);
          },
          loadProgress: (state, action: PayloadAction<{ [bookId: string]: number }>) => {
+           console.log('🔄 Redux: loadProgress called with', action.payload);
            state.progress = action.payload;
            state.loaded = true;
          },
@@ -82,8 +84,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
      // Async function to load progress from Supabase
      export const loadProgressFromSupabase = () => async (dispatch: any) => {
+       console.log('🔄 Loading progress from Supabase...');
        const { data: { user } } = await supabase.auth.getUser();
-       if (!user) return;
+       if (!user) {
+         console.log('❌ No user found, skipping progress load');
+         return;
+       }
 
        const { data, error } = await supabase
          .from('reading_progress')
@@ -100,6 +106,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
          progressMap[item.book_id] = item.pages_read || 0;
        });
 
+       console.log('📊 Loaded progress from database:', progressMap);
        dispatch(progressSlice.actions.loadProgress(progressMap));
      };
 

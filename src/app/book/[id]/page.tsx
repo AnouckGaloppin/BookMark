@@ -6,6 +6,21 @@
      import ProgressUpdater from '@/components/ProgressUpdater';
      import { loadProgressFromSupabase } from '@/lib/progressSlice';
      import { AppDispatch } from '@/lib/store';
+     import { useCrossTabSync } from '@/lib/useCrossTabSync';
+
+     interface BookPayload {
+       new: {
+         id: string;
+         title: string;
+         author: string;
+         user_id: string;
+         cover_image: string | null;
+         total_pages: number;
+         isbn: string | null;
+       };
+     }
+
+
 
      export default function BookDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -13,6 +28,9 @@
   const [error, setError] = useState<string | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
+  
+  // Enable cross-tab synchronization
+  useCrossTabSync();
 
        useEffect(() => {
          const fetchBook = async () => {
@@ -35,6 +53,58 @@
          fetchBook();
          dispatch(loadProgressFromSupabase());
        }, [id, dispatch]);
+
+       // Real-time book subscription only (progress handled by cross-tab sync)
+       useEffect(() => {
+         let bookSubscription: any = null;
+
+         const setupBookSubscription = async () => {
+           try {
+             const { data: { user } } = await supabase.auth.getUser();
+             if (!user?.id) {
+               console.log('No user found, skipping book subscription');
+               return;
+             }
+
+             console.log('Setting up book subscription for book:', id);
+
+             // Book subscription only - progress is handled by cross-tab sync
+             bookSubscription = supabase
+               .channel(`book-${id}`)
+               .on(
+                 'postgres_changes',
+                 { event: 'UPDATE', schema: 'public', table: 'books', filter: `id=eq.${id}` },
+                 (payload: BookPayload) => {
+                   console.log('Book updated:', payload.new);
+                   setBook(payload.new);
+                 }
+               )
+               .subscribe((status) => {
+                 console.log('Book subscription status:', status);
+                 if (status !== 'SUBSCRIBED') {
+                   console.error('Failed to subscribe to book updates:', status);
+                 }
+               });
+
+           } catch (error) {
+             console.error('Error setting up book subscription:', error);
+           }
+         };
+
+         // Add a small delay to ensure auth state is ready
+         const timer = setTimeout(() => {
+           setupBookSubscription();
+         }, 100);
+
+         // Cleanup subscription on unmount
+         return () => {
+           clearTimeout(timer);
+           if (bookSubscription) {
+             console.log('Cleaning up book subscription');
+             supabase.removeChannel(bookSubscription);
+           }
+         };
+       }, [id]);
 
 
 

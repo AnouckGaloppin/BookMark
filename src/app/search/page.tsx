@@ -1,16 +1,43 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth';
+  import { useState, useEffect } from 'react';
+  import { supabase } from '@/lib/supabase';
+  import { useAuth } from '@/lib/auth';
+  import { useDispatch, useSelector } from 'react-redux';
+  import { updateProgress as updateProgressAction, loadProgressFromSupabase } from '@/lib/progressSlice';
+  import { RootState } from '@/lib/store';
+  import ProgressUpdater from '@/components/ProgressUpdater';
+  import { useCrossTabSync } from '@/lib/useCrossTabSync';
+import { PostgrestError } from '@supabase/supabase-js';
+
+// Define payload types for Realtime
+interface BookPayload {
+  new: {
+    id: string;
+    title: string;
+    author: string;
+    user_id: string;
+    cover_image: string | null;
+    total_pages: number;
+    isbn: string | null;
+  };
+}
+
+
+
+
 
 export default function SearchPage() {
   const { session } = useAuth();
+  const dispatch = useDispatch();
+  const progress = useSelector((state: RootState) => state.progress.progress);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
+  const [userBooks, setUserBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manualPages, setManualPages] = useState<{ [key: string]: number }>({});
-  const [showManualInput, setShowManualInput] = useState<{ [key: string]: boolean }>({});
+  
+  // Enable cross-tab synchronization
+  useCrossTabSync();
 
   useEffect(() => {
     if (!query) return;
@@ -28,12 +55,10 @@ export default function SearchPage() {
             let total_pages = 0;
             try {
               if (doc.cover_edition_key) {
-                // Try works endpoint first
                 const workResponse = await fetch(`/api/openlibrary/works/${doc.cover_edition_key}.json`, { redirect: 'follow' });
                 if (workResponse.ok) {
                   const workData = await workResponse.json();
                   total_pages = workData.number_of_pages || 0;
-                  // Check for edition key if work data lacks pages
                   if (!total_pages && workData.edition_key) {
                     const editionKey = Object.values(workData.edition_key)[0];
                     const editionResponse = await fetch(`/api/openlibrary/books/${editionKey}.json`, { redirect: 'follow' });
@@ -43,7 +68,6 @@ export default function SearchPage() {
                     }
                   }
                 } else {
-                  // Fallback to books endpoint if works fails
                   const editionResponse = await fetch(`/api/openlibrary/books/${doc.cover_edition_key}.json`, { redirect: 'follow' });
                   if (editionResponse.ok) {
                     const editionData = await editionResponse.json();
@@ -51,12 +75,15 @@ export default function SearchPage() {
                   }
                 }
               }
-              // Fallback to Google Books with ISBN if still no pages
               if (doc.isbn?.[0] && total_pages === 0) {
-                const googleResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${doc.isbn[0]}&key={YOUR_API_KEY}`);
+                const googleResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${doc.isbn[0]}&key={YOUR_GOOGLE_API_KEY}`);
                 const googleData = await googleResponse.json();
                 total_pages = googleData.items?.[0]?.volumeInfo?.pageCount || 0;
-                console.log('Google Books API response for', doc.title, ':', googleData);
+              }
+              if (doc.isbn?.[0] && total_pages === 0) {
+                const worldcatResponse = await fetch(`http://www.worldcat.org/webservices/catalog/content/isbn/${doc.isbn[0]}?wskey={YOUR_WORLDCAT_API_KEY}`);
+                const worldcatData = await worldcatResponse.json();
+                total_pages = worldcatData?.list?.[0]?.numberOfPages || 0;
               }
             } catch (fetchErr) {
               console.warn(`Fetch error for ${doc.title}, skipping page count:`, fetchErr);
@@ -85,46 +112,111 @@ export default function SearchPage() {
     return () => clearTimeout(debounce);
   }, [query]);
 
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const booksSubscription = supabase
+      .channel('public:books')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+        (payload: BookPayload) => {
+          console.log('🎉 SUBSCRIPTION: New book inserted:', payload.new);
+          setUserBooks((prev) => {
+            const updated = [...prev, payload.new].sort((a, b) => a.title.localeCompare(b.title));
+            console.log('Updated userBooks state:', updated);
+            return updated;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+        (payload: BookPayload) => {
+          console.log('Book updated:', payload.new);
+          setUserBooks((prev) =>
+            prev.map((book) => (book.id === payload.new.id ? { ...book, ...payload.new } : book)).sort((a, b) => a.title.localeCompare(b.title))
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+        (payload: any) => {
+          console.log('Book deleted:', payload.old);
+          setUserBooks((prev) => prev.filter((book) => book.id !== payload.old.id));
+        }
+      )
+      .subscribe((status) => {
+        console.log('Books subscription status:', status);
+        if (status !== 'SUBSCRIBED') {
+          setError('Failed to subscribe to books updates');
+        }
+      });
+
+
+
+    // Initial fetch of user books
+    const fetchUserBooks = async () => {
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('title');
+      if (error) {
+        setError(`Failed to fetch user books: ${error.message}`);
+      } else {
+        setUserBooks(data);
+      }
+    };
+    fetchUserBooks();
+
+    // Load progress from database
+    dispatch(loadProgressFromSupabase() as any);
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(booksSubscription);
+    };
+  }, [session?.user?.id]);
+
   const addBook = async (book: any) => {
     if (!session?.user) {
       setError('Please log in to add books.');
       return;
     }
 
-    // Use manual pages if available, otherwise use API pages
-    const finalPages = manualPages[book.title] || book.total_pages || 0;
+    const bookId = crypto.randomUUID();
+    console.log('Adding book with ID:', bookId);
+
+    const newBook = {
+      id: bookId,
+      title: book.title,
+      author: book.author,
+      user_id: session.user.id,
+      cover_image: book.cover,
+      total_pages: book.total_pages || 0,
+      isbn: book.isbn,
+    };
 
     const { error } = await supabase
       .from('books')
-      .insert({
-        id: crypto.randomUUID(),
-        title: book.title,
-        author: book.author,
-        user_id: session.user.id,
-        cover_image: book.cover,
-        total_pages: finalPages,
-        isbn: book.isbn,
-      });
+      .insert(newBook);
 
     if (error) {
       setError(`Failed to add book: ${error.message}`);
+      console.error('Error adding book:', error);
     } else {
+      console.log('Book added successfully, updating state immediately...');
+      // Update state immediately as fallback
+      setUserBooks((prev) => [...prev, newBook].sort((a, b) => a.title.localeCompare(b.title)));
       setError('Book added successfully!');
       setTimeout(() => setError(null), 2000);
-      // Clear manual input after successful addition
-      setManualPages(prev => ({ ...prev, [book.title]: undefined }));
-      setShowManualInput(prev => ({ ...prev, [book.title]: false }));
     }
   };
 
-  const handleManualPagesChange = (bookTitle: string, pages: string) => {
-    const numPages = parseInt(pages) || 0;
-    setManualPages(prev => ({ ...prev, [bookTitle]: numPages }));
-  };
 
-  const toggleManualInput = (bookTitle: string) => {
-    setShowManualInput(prev => ({ ...prev, [bookTitle]: !prev[bookTitle] }));
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -139,61 +231,60 @@ export default function SearchPage() {
         />
         {loading && <p className="mt-4 text-gray-600">Loading...</p>}
         {error && <p className="mt-4 text-red-500">{error}</p>}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {results.map((book, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              {book.cover ? (
-                <div className="aspect-[3/4] overflow-hidden">
-                  <img src={book.cover} alt={`Cover of ${book.title}`} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
-                  <p className="text-gray-500 text-sm">No cover image</p>
-                </div>
-              )}
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{book.title}</h2>
-                <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
-                {book.isbn && <p className="text-gray-500 text-xs">ISBN: {book.isbn}</p>}
-                {book.total_pages > 0 && <p className="text-gray-500 text-xs">Pages: {book.total_pages}</p>}
-                {book.total_pages === 0 && (
-                  <div className="mt-2">
-                    {showManualInput[book.title] ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          placeholder="Enter pages"
-                          value={manualPages[book.title] || ''}
-                          onChange={(e) => handleManualPagesChange(book.title, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          min="1"
-                        />
-                        <button
-                          onClick={() => toggleManualInput(book.title)}
-                          className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => toggleManualInput(book.title)}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 underline"
-                      >
-                        Add page count manually
-                      </button>
-                    )}
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Search Results</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {results.map((book, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                {book.cover ? (
+                  <div className="aspect-[3/4] overflow-hidden">
+                    <img src={book.cover} alt={`Cover of ${book.title}`} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm">No cover image</p>
                   </div>
                 )}
-                <button
-                  onClick={() => addBook(book)}
-                  className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Add Book
-                </button>
+                <div className="p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{book.title}</h2>
+                  <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
+                  {book.isbn && <p className="text-gray-500 text-xs">ISBN: {book.isbn}</p>}
+                  {book.total_pages > 0 && <p className="text-gray-500 text-xs">Pages: {book.total_pages}</p>}
+                  <button
+                    onClick={() => addBook(book)}
+                    className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Add Book
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        <div className="mt-8">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Books</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userBooks.map((book) => (
+              <div key={book.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                {book.cover_image ? (
+                  <div className="aspect-[3/4] overflow-hidden">
+                    <img src={book.cover_image} alt={`Cover of ${book.title}`} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm">No cover image</p>
+                  </div>
+                )}
+                <div className="p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{book.title}</h2>
+                  <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
+                  {book.isbn && <p className="text-gray-500 text-xs">ISBN: {book.isbn}</p>}
+                  {book.total_pages > 0 && <p className="text-gray-500 text-xs">Pages: {book.total_pages}</p>}
+                  <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

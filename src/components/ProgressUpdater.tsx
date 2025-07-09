@@ -1,9 +1,10 @@
 'use client';
   import { useDispatch, useSelector } from 'react-redux';
-  import { updateProgress } from '@/lib/progressSlice';
+  import { updateProgress, setProgress } from '@/lib/progressSlice';
   import { RootState } from '@/lib/store';
   import { useState, useEffect } from 'react';
   import { supabase } from '@/lib/supabase';
+  import { progressSync, ProgressUpdateMessage } from '@/lib/crossTabSync';
 
   export default function ProgressUpdater({ bookId, totalPages }: { bookId: string; totalPages: number }) {
   const dispatch = useDispatch();
@@ -18,17 +19,59 @@
     setLocalTotalPages(totalPages);
   }, [totalPages]);
 
-    const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleProgressChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
       const newPages = parseInt(inputValue, 10) || 0;
       
-      if (newPages > totalPages) {
-        setError(`Pages read cannot exceed the total pages (${totalPages})`);
+      if (newPages > localTotalPages) {
+        setError(`Pages read cannot exceed the total pages (${localTotalPages})`);
         return;
       }
       
       setError(null);
-      dispatch(updateProgress({ bookId, pages: newPages }));
+      console.log('🔄 ProgressUpdater: Updating progress to', newPages, 'for book', bookId);
+      // Update Redux state immediately
+      dispatch(setProgress({ bookId, pages: newPages }));
+      
+      // Notify other tabs
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        const message: ProgressUpdateMessage = {
+          type: 'PROGRESS_UPDATE',
+          bookId,
+          pages: newPages,
+          userId: user.id
+        };
+        progressSync.send(message);
+        console.log('📡 Cross-tab: Sent progress update to other tabs');
+      }
+      
+      // Save to database
+      saveProgressToSupabase(bookId, newPages);
+    };
+
+    const saveProgressToSupabase = async (bookId: string, pages: number) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) return;
+
+      console.log('💾 Saving progress to database:', { bookId, pages, userId });
+
+      const { error } = await supabase.from('reading_progress').upsert(
+        {
+          book_id: bookId,
+          user_id: userId,
+          pages_read: pages,
+        },
+        { onConflict: 'book_id,user_id' }
+      );
+      
+      if (error) {
+        console.error('Error saving progress:', error.message);
+        setError(`Failed to save progress: ${error.message}`);
+      } else {
+        console.log('✅ Progress saved to database successfully');
+      }
     };
 
     const handleTotalPagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +118,7 @@
             error ? 'border-red-300 focus:border-red-300' : 'border-gray-300 focus:border-indigo-300'
           }`}
           min="0"
-          max={totalPages}
+          max={localTotalPages}
           placeholder="0"
         />
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}

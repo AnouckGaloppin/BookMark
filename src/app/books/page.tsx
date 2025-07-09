@@ -6,6 +6,23 @@
      import { useDispatch } from 'react-redux';
      import { loadProgressFromSupabase } from '@/lib/progressSlice';
      import { AppDispatch } from '@/lib/store';
+     import { useCrossTabSync } from '@/lib/useCrossTabSync';
+
+     interface BookPayload {
+       new: {
+         id: string;
+         title: string;
+         author: string;
+         user_id: string;
+         cover_image: string | null;
+         total_pages: number;
+         isbn: string | null;
+       };
+     }
+
+
+
+
 
      export default function BooksPage() {
   const { session, loading } = useAuth();
@@ -14,6 +31,9 @@
   const [loadingBooks, setLoadingBooks] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
+  
+  // Enable cross-tab synchronization
+  useCrossTabSync();
 
        useEffect(() => {
          if (session?.user) {
@@ -21,6 +41,53 @@
            dispatch(loadProgressFromSupabase());
          }
        }, [session, dispatch]);
+
+       // Real-time subscriptions
+       useEffect(() => {
+         if (!session?.user?.id) return;
+
+         const booksSubscription = supabase
+           .channel('public:books')
+           .on(
+             'postgres_changes',
+             { event: 'INSERT', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+             (payload: BookPayload) => {
+               console.log('New book inserted:', payload.new);
+               setBooks((prev) => [...prev, payload.new].sort((a, b) => a.title.localeCompare(b.title)));
+             }
+           )
+           .on(
+             'postgres_changes',
+             { event: 'UPDATE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+             (payload: BookPayload) => {
+               console.log('Book updated:', payload.new);
+               setBooks((prev) =>
+                 prev.map((book) => (book.id === payload.new.id ? { ...book, ...payload.new } : book)).sort((a, b) => a.title.localeCompare(b.title))
+               );
+             }
+           )
+           .on(
+             'postgres_changes',
+             { event: 'DELETE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+             (payload: any) => {
+               console.log('Book deleted:', payload.old);
+               setBooks((prev) => prev.filter((book) => book.id !== payload.old.id));
+             }
+           )
+           .subscribe((status) => {
+             console.log('Books subscription status:', status);
+             if (status !== 'SUBSCRIBED') {
+               setError('Failed to subscribe to books updates');
+             }
+           });
+
+
+
+         // Cleanup subscriptions on unmount
+         return () => {
+           supabase.removeChannel(booksSubscription);
+         };
+       }, [session?.user?.id, dispatch]);
 
        const loadBooks = async() => {
         if(!session?.user) return;

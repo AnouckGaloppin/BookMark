@@ -1,7 +1,9 @@
 'use client';
   import { useState, useEffect } from 'react';
+  import { useSelector } from 'react-redux';
   import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
   import { supabase } from '@/lib/supabase';
+  import { RootState } from '@/lib/store';
 
   interface ProgressData {
     date: string;
@@ -11,6 +13,7 @@
   export default function ProgressChart({ bookId }: { bookId: string }) {
     const [progressData, setProgressData] = useState<ProgressData[]>([]);
     const [loading, setLoading] = useState(true);
+    const currentProgress = useSelector((state: RootState) => state.progress.progress[bookId] || 0);
 
     useEffect(() => {
       const fetchProgress = async () => {
@@ -35,19 +38,25 @@
             date: new Date(item.recorded_at).toLocaleDateString(),
             pages_read: item.pages_read || 0,
           }));
-        } else {
-          // Fall back to current progress if no history
-          const { data: currentData, error: currentError } = await supabase
-            .from('reading_progress')
-            .select('pages_read, updated_at')
-            .eq('book_id', bookId)
-            .single();
-
-          if (!currentError && currentData && currentData.pages_read > 0) {
-            formattedData = [{
-              date: new Date(currentData.updated_at).toLocaleDateString(),
-              pages_read: currentData.pages_read || 0,
-            }];
+        }
+        
+        // Add current progress from Redux if it's higher than the last history entry
+        if (currentProgress > 0) {
+          console.log('📊 ProgressChart: Current progress from Redux:', currentProgress, 'for book', bookId);
+          const today = new Date().toLocaleDateString();
+          const lastEntry = formattedData[formattedData.length - 1];
+          
+          if (!lastEntry || lastEntry.date !== today || currentProgress > lastEntry.pages_read) {
+            // Add or update today's entry with current progress
+            const todayEntry = { date: today, pages_read: currentProgress };
+            
+            if (lastEntry && lastEntry.date === today) {
+              // Update today's entry
+              formattedData[formattedData.length - 1] = todayEntry;
+            } else {
+              // Add new entry for today
+              formattedData.push(todayEntry);
+            }
           }
         }
         
@@ -56,7 +65,7 @@
       };
 
       fetchProgress();
-    }, [bookId]);
+    }, [bookId, currentProgress]); // Add currentProgress as dependency
 
     if (loading) {
       return <p className="p-4 text-gray-600">Loading progress chart...</p>;
