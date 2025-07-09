@@ -1,5 +1,6 @@
 'use client';
   import { useState, useEffect } from 'react';
+  import { useRouter } from 'next/navigation';
   import { supabase } from '@/lib/supabase';
   import { useAuth } from '@/lib/auth';
   import { useDispatch, useSelector } from 'react-redux';
@@ -8,6 +9,7 @@
   import ProgressUpdater from '@/components/ProgressUpdater';
   import { useCrossTabSync } from '@/lib/useCrossTabSync';
 import { PostgrestError } from '@supabase/supabase-js';
+import { toast } from "sonner";
 
 // Define payload types for Realtime
 interface BookPayload {
@@ -22,11 +24,8 @@ interface BookPayload {
   };
 }
 
-
-
-
-
 export default function SearchPage() {
+  const router = useRouter();
   const { session } = useAuth();
   const dispatch = useDispatch();
   const progress = useSelector((state: RootState) => state.progress.progress);
@@ -35,9 +34,27 @@ export default function SearchPage() {
   const [userBooks, setUserBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   
   // Enable cross-tab synchronization
   useCrossTabSync();
+
+  // Auto-slide carousel effect
+  useEffect(() => {
+    if (userBooks.length <= 5 || isPaused) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => {
+        if (prev >= userBooks.length - 5) {
+          return 0; // Reset to beginning when reaching the end
+        }
+        return prev + 1;
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [userBooks.length, isPaused]);
 
   useEffect(() => {
     if (!query) return;
@@ -211,8 +228,7 @@ export default function SearchPage() {
       console.log('Book added successfully, updating state immediately...');
       // Update state immediately as fallback
       setUserBooks((prev) => [...prev, newBook].sort((a, b) => a.title.localeCompare(b.title)));
-      setError('Book added successfully!');
-      setTimeout(() => setError(null), 2000);
+      toast('Book added successfully!');
     }
   };
 
@@ -233,26 +249,28 @@ export default function SearchPage() {
         {error && <p className="mt-4 text-red-500">{error}</p>}
         <div className="mt-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Search Results</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {results.map((book, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 max-w-64 flex flex-col h-96">
                 {book.cover ? (
-                  <div className="aspect-[3/4] overflow-hidden">
-                    <img src={book.cover} alt={`Cover of ${book.title}`} className="w-full h-full object-cover" />
+                  <div className="flex-[3] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img src={book.cover} alt={`Cover of ${book.title}`} className="max-h-full max-w-full object-contain" />
                   </div>
                 ) : (
-                  <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
+                  <div className="flex-[3] w-full bg-gray-100 flex items-center justify-center">
                     <p className="text-gray-500 text-sm">No cover image</p>
                   </div>
                 )}
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{book.title}</h2>
-                  <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
-                  {book.isbn && <p className="text-gray-500 text-xs">ISBN: {book.isbn}</p>}
-                  {book.total_pages > 0 && <p className="text-gray-500 text-xs">Pages: {book.total_pages}</p>}
+                <div className="flex-[1] p-2 flex flex-col h-full">
+                  <div className="flex-1 min-h-0">
+                    <h2 className="text-base font-semibold text-gray-900 mb-0.5 line-clamp-2">{book.title}</h2>
+                    <p className="text-gray-600 text-xs mb-0">by {book.author}</p>
+                    {book.isbn && <p className="text-gray-500 text-xs mb-0">ISBN: {book.isbn}</p>}
+                    {book.total_pages > 0 && <p className="text-gray-500 text-xs mb-0">Pages: {book.total_pages}</p>}
+                  </div>
                   <button
                     onClick={() => addBook(book)}
-                    className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="mt-1 w-full bg-indigo-600 text-white py-1 rounded-lg hover:bg-indigo-700 transition-colors text-xs"
                   >
                     Add Book
                   </button>
@@ -263,28 +281,101 @@ export default function SearchPage() {
         </div>
         <div className="mt-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Books</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userBooks.map((book) => (
-              <div key={book.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                {book.cover_image ? (
-                  <div className="aspect-[3/4] overflow-hidden">
-                    <img src={book.cover_image} alt={`Cover of ${book.title}`} className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm">No cover image</p>
-                  </div>
-                )}
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{book.title}</h2>
-                  <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
-                  {book.isbn && <p className="text-gray-500 text-xs">ISBN: {book.isbn}</p>}
-                  {book.total_pages > 0 && <p className="text-gray-500 text-xs">Pages: {book.total_pages}</p>}
-                  <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
+          {userBooks.length > 0 ? (
+            <div 
+              className="relative"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
+              {/* Carousel Container */}
+              <div className="overflow-hidden rounded-lg">
+                <div 
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentSlide * (100 / 5)}%)` }}
+                >
+                  {userBooks.map((book, index) => (
+                    <div key={book.id} className="w-1/5 flex-shrink-0 px-1">
+                      <button
+                        onClick={() => router.push(`/book/${book.id}`)}
+                        className="w-full bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-36"
+                      >
+                        {book.cover_image ? (
+                          <div className="aspect-[3/4] overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img 
+                              src={book.cover_image} 
+                              alt={`Cover of ${book.title}`} 
+                              className="w-full h-full object-contain" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-[3/4] bg-gray-200 flex items-center justify-center">
+                            <div className="text-center">
+                              <p className="text-gray-500 text-sm font-medium">{book.title}</p>
+                              <p className="text-gray-400 text-xs">No cover</p>
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Navigation Dots */}
+              {userBooks.length > 5 && (
+                <div className="flex justify-center mt-4 space-x-2">
+                  {Array.from({ length: userBooks.length - 4 }, (_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`w-3 h-3 rounded-full transition-colors duration-200 ${
+                        index === currentSlide ? 'bg-indigo-600' : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to position ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Previous/Next Buttons */}
+              {userBooks.length > 5 && (
+                <>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
+                    disabled={currentSlide === 0}
+                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full shadow-md transition-all duration-200 ${
+                      currentSlide === 0 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                        : 'bg-white/80 hover:bg-white text-gray-800 hover:shadow-lg'
+                    }`}
+                    aria-label="Previous book"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => Math.min(userBooks.length - 5, prev + 1))}
+                    disabled={currentSlide >= userBooks.length - 5}
+                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full shadow-md transition-all duration-200 ${
+                      currentSlide >= userBooks.length - 5 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                        : 'bg-white/80 hover:bg-white text-gray-800 hover:shadow-lg'
+                    }`}
+                    aria-label="Next book"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No books added yet. Search for books above to get started!</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -57,6 +57,7 @@
        // Real-time book subscription only (progress handled by cross-tab sync)
        useEffect(() => {
          let bookSubscription: any = null;
+         let isSubscribed = false;
 
          const setupBookSubscription = async () => {
            try {
@@ -81,7 +82,9 @@
                )
                .subscribe((status) => {
                  console.log('Book subscription status:', status);
-                 if (status !== 'SUBSCRIBED') {
+                 if (status === 'SUBSCRIBED') {
+                   isSubscribed = true;
+                 } else {
                    console.error('Failed to subscribe to book updates:', status);
                  }
                });
@@ -99,9 +102,13 @@
          // Cleanup subscription on unmount
          return () => {
            clearTimeout(timer);
-           if (bookSubscription) {
-             console.log('Cleaning up book subscription');
-             supabase.removeChannel(bookSubscription);
+           if (bookSubscription && isSubscribed) {
+             try {
+               console.log('Cleaning up book subscription');
+               supabase.removeChannel(bookSubscription);
+             } catch (error) {
+               console.log('Error during subscription cleanup:', error);
+             }
            }
          };
        }, [id]);
@@ -131,7 +138,7 @@
                      <p className="text-gray-500 text-sm">No cover image</p>
                    </div>
                  )}
-                 <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center md:text-left">{book.title}</h1>
+                 <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">{book.title}</h1>
                  {book.author && <p className="text-gray-600 text-lg mb-2 text-center md:text-left">by {book.author}</p>}
                  <div className="mt-2 max-w-xs w-full">
                    <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
