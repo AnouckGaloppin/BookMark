@@ -232,6 +232,16 @@ export default function SearchPage() {
     }
   };
 
+  // Remove book handler
+  const handleRemoveBook = async (bookId: string) => {
+    const { error } = await supabase.from('books').delete().eq('id', bookId);
+    if (!error) {
+      setUserBooks((prev) => prev.filter((book) => book.id !== bookId));
+      toast('Book removed!');
+    } else {
+      toast('Failed to remove book', { description: error.message });
+    }
+  };
 
 
   return (
@@ -294,10 +304,10 @@ export default function SearchPage() {
                   style={{ transform: `translateX(-${currentSlide * (100 / 5)}%)` }}
                 >
                   {userBooks.map((book, index) => (
-                    <div key={book.id} className="w-1/5 flex-shrink-0 px-1">
+                    <div key={book.id} className="w-1/5 flex-shrink-0 px-1 relative">
                       <button
                         onClick={() => router.push(`/book/${book.id}`)}
-                        className="w-full bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-36"
+                        className="w-full bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-36 relative"
                       >
                         {book.cover_image ? (
                           <div className="aspect-[3/4] overflow-hidden bg-gray-100 flex items-center justify-center">
