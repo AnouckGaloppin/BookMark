@@ -19,8 +19,9 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd /home/ubuntu/booktracker
+          cd /var/www/bookmark.anouckgaloppin.com/booktracker
           git pull origin main
           docker-compose down
           docker-compose up -d --build
-          docker system prune -f 
+          docker system prune -f
+          echo "BookMark deployed successfully on port 3001" 
