@@ -149,7 +149,7 @@
          <div className="min-h-screen bg-gray-50 p-4">
            <div className="max-w-6xl mx-auto">
              <h1 className="text-3xl font-bold mb-6 text-gray-900">Your Books</h1>
-             <a href="/search" className="mb-6 inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Search for Books</a>
+             <a href="/add-book" className="mb-6 inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Add book</a>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-center sm:justify-items-start justify-center sm:justify-start">
                {books.map((book) => (
                  <a
