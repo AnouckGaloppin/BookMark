@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -48,37 +49,19 @@ export default function LoginPage() {
     
     if (signInError) {
       console.log('Sign in error:', signInError.message);
-    }
-    
-    if (signInError && signInError.message.includes('Invalid login credentials')) {
-      console.log('Invalid credentials, attempting signup');
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-      if (signUpError) {
-        console.log('Signup error:', signUpError.message);
-        setError(signUpError.message);
-        setIsLoggingIn(false);
-      } else if (data.session) {
-        console.log('Signup successful with session');
-        setError(null);
-        setLoginCompleted(true);
-        // Wait longer for session to sync properly
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/profile');
+      // Show user-friendly error message for invalid credentials
+      if (signInError.message.includes('Invalid login credentials')) {
+        setError('Wrong email address and/or password. Try again.');
       } else {
-        console.log('Signup successful but no session');
-        setError('Signup successful! Auto-login failed. Try logging in.');
-        setIsLoggingIn(false);
+        setError(signInError.message);
       }
-    } else if (signInError) {
-      console.log('Other sign in error:', signInError.message);
-      setError(signInError.message);
       setIsLoggingIn(false);
     } else {
       console.log('Sign in successful');
       setLoginCompleted(true);
       // Wait longer for session to sync properly
       await new Promise(resolve => setTimeout(resolve, 500));
-      router.push('/profile');
+      router.push('/');
     }
   };
 
@@ -93,7 +76,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: { 
-        redirectTo: `${window.location.origin}/profile` 
+        redirectTo: `${window.location.origin}/` 
       },
     });
     if (error) setError(error.message);
@@ -105,49 +88,102 @@ export default function LoginPage() {
   }, [email, password]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center">Log In</h1>
-        {error && <p className="text-red-500 text-center mb-4" style={{color: 'red'}}>{error}</p>}
-        {isLoggingIn && <p className="text-blue-500 text-center mb-4">Logging in...</p>}
-        <form onSubmit={handleEmailLogin} className="space-y-4" noValidate>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📚</div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+          <p className="text-gray-600">Sign in to continue your reading journey</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <form onSubmit={handleEmailLogin} className="space-y-6" noValidate>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            {isLoggingIn && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+                Logging in...
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter your email"
+                disabled={isLoggingIn}
+              />
+              {validationErrors.email && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter your password"
+                disabled={isLoggingIn}
+              />
+              {validationErrors.password && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.password}</p>
+              )}
+            </div>
+
+            <button
+              type="submit"
               disabled={isLoggingIn}
-            />
-            {validationErrors.email && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{validationErrors.email}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
-              disabled={isLoggingIn}
-            />
-            {validationErrors.password && <p className="text-red-500 text-sm mt-1" style={{color: 'red'}}>{validationErrors.password}</p>}
-          </div>
+              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {isLoggingIn ? 'Logging In...' : 'Sign In with Email'}
+            </button>
+          </form>
+
           <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            onClick={handleGitHubLogin}
             disabled={isLoggingIn}
+            className="mt-4 w-full bg-gray-800 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
-            {isLoggingIn ? 'Logging In...' : 'Log In with Email'}
+            Sign In with GitHub
           </button>
-        </form>
-        <button
-          onClick={handleGitHubLogin}
-          className="mt-4 w-full bg-gray-800 text-white p-2 rounded-md hover:bg-gray-900 disabled:opacity-50"
-          disabled={isLoggingIn}
-        >
-          Log In with GitHub
-        </button>
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                href="/auth/register"
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
+              >
+                Create one here
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <Link
+            href="/"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors duration-200"
+          >
+            ← Back to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

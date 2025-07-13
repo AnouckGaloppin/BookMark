@@ -114,6 +114,8 @@
           type="number"
           value={pages === 0 ? '' : pages}
           onChange={handleProgressChange}
+          onClick={(e) => e.stopPropagation()}
+          onFocus={(e) => e.stopPropagation()}
           className={`mt-1 block w-full rounded-md shadow-sm focus:ring focus:ring-indigo-200 ${
             error ? 'border-red-300 focus:border-red-300' : 'border-gray-300 focus:border-indigo-300'
           }`}
@@ -131,7 +133,11 @@
         <div className="flex items-center justify-between mt-1">
           <p className="text-sm text-gray-600">{pages} / {localTotalPages} pages</p>
           <button
-            onClick={toggleEditTotalPages}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleEditTotalPages();
+            }}
             className="text-xs text-indigo-600 hover:text-indigo-800 underline"
           >
             Edit total
@@ -144,20 +150,30 @@
               type="number"
               value={localTotalPages || ''}
               onChange={handleTotalPagesChange}
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
               className="w-full min-w-[120px] mb-3 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               min={pages}
               placeholder="Total pages"
             />
             <div className="flex justify-center gap-3 w-full">
               <button
-                onClick={updateTotalPages}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateTotalPages();
+                }}
                 className="px-4 py-1.5 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 shadow-sm hover:shadow-md font-medium"
                 style={{ minWidth: 90 }}
               >
                 Save
               </button>
               <button
-                onClick={toggleEditTotalPages}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleEditTotalPages();
+                }}
                 className="px-4 py-1.5 text-sm bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-colors duration-200 shadow-sm hover:shadow-md font-medium"
                 style={{ minWidth: 90 }}
               >

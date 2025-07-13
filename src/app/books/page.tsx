@@ -150,13 +150,21 @@
            <div className="max-w-6xl mx-auto">
              <h1 className="text-3xl font-bold mb-6 text-gray-900">Your Books</h1>
              <a href="/search" className="mb-6 inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Search for Books</a>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-center sm:justify-items-start justify-center sm:justify-start">
                {books.map((book) => (
-                 <div key={book.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 max-w-64 flex flex-col h-96 relative">
+                 <a
+                   key={book.id}
+                   href={`/book/${book.id}`}
+                   className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-64 h-96 flex flex-col relative cursor-pointer"
+                 >
                    {/* Remove button */}
                    <button
                      type="button"
-                     onClick={() => handleRemoveBook(book.id)}
+                     onClick={(e) => {
+                       e.preventDefault();
+                       e.stopPropagation();
+                       handleRemoveBook(book.id);
+                     }}
                      className="absolute top-2 right-2 z-10 bg-indigo-600 text-white rounded-full p-2 w-9 h-9 flex items-center justify-center shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                      title="Remove book"
                    >
@@ -187,14 +195,8 @@
                        {/* Optionally add ISBN/pages here if desired */}
                      </div>
                      <ProgressUpdater bookId={book.id} totalPages={book.total_pages ?? 0} />
-                     <a
-                       href={`/book/${book.id}`}
-                       className="mt-2 bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700 transition-colors text-xs text-center inline-block w-full"
-                     >
-                       View Details
-                     </a>
                    </div>
-                 </div>
+                 </a>
                ))}
              </div>
            </div>

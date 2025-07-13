@@ -8,7 +8,7 @@
      import { AppDispatch } from '@/lib/store';
      import { useCrossTabSync } from '@/lib/useCrossTabSync';
      import { Book, BookSubscription } from '@/types';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+     import type { RealtimeChannel } from '@supabase/supabase-js';
 
 
 

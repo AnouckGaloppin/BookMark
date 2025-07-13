@@ -313,9 +313,9 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <div className="flex items-center space-x-6">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
             {/* Avatar Section */}
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                 {profile?.avatar_url ? (
                   <img
@@ -340,15 +340,15 @@ export default function ProfilePage() {
             </div>
 
             {/* User Info */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
               <p className="text-gray-600 mb-4">Email: {session.user.email}</p>
               
               {/* Username Section */}
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <span className="text-gray-700 font-medium">Username:</span>
                 {editingUsername ? (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                     <input
                       type="text"
                       value={newUsername}
@@ -386,13 +386,15 @@ export default function ProfilePage() {
             </div>
 
             {/* Logout Button */}
+            <div className="flex-shrink-0">
       <button
         onClick={handleLogout}
         disabled={isLoggingOut}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="w-full sm:w-auto bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
       >
         {isLoggingOut ? 'Logging out...' : 'Logout'}
       </button>
+            </div>
           </div>
         </div>
 

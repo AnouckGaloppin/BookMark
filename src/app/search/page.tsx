@@ -1,15 +1,15 @@
 'use client';
   import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+  import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth';
-import { useDispatch } from 'react-redux';
-import { loadProgressFromSupabase } from '@/lib/progressSlice';
-import type { Book, Results } from '@/types';
-// import { RootState } from '@/lib/store';
-// import ProgressUpdater from '@/components/ProgressUpdater';
-import { useCrossTabSync } from '@/lib/useCrossTabSync';
+  import { supabase } from '@/lib/supabase';
+  import { useAuth } from '@/lib/auth';
+  import { useDispatch } from 'react-redux';
+  import { loadProgressFromSupabase } from '@/lib/progressSlice';
+  import type { Book, Results } from '@/types';
+  // import { RootState } from '@/lib/store';
+  // import ProgressUpdater from '@/components/ProgressUpdater';
+  import { useCrossTabSync } from '@/lib/useCrossTabSync';
 // import { PostgrestError } from '@supabase/supabase-js';
 import { toast } from "sonner";
 
