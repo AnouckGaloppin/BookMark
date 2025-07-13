@@ -8,7 +8,7 @@ export default function Home() {
         <div className="text-center">
           <div className="text-6xl mb-6">📚</div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Track Your Reading Journey starting now
+            Track Your Reading Journey Starting Now
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
             Discover new books, track your reading progress, and build your personal library. 
