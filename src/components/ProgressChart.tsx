@@ -10,20 +10,7 @@
     pages_read: number;
   }
 
-  function getLatestProgressPerDay(progressList: { updated_at: string }[]) {
-    // Map: date string (YYYY-MM-DD) -> progress entry
-    const map = new Map();
-    for (const entry of progressList) {
-      const date = new Date(entry.updated_at).toISOString().slice(0, 10); // YYYY-MM-DD
-      if (!map.has(date) || new Date(entry.updated_at) > new Date(map.get(date).updated_at)) {
-        map.set(date, entry);
-      }
-    }
-    // Return sorted by date ascending
-    return Array.from(map.values()).sort((a, b) =>
-      new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-    );
-  }
+  
 
   export default function ProgressChart({ bookId }: { bookId: string }) {
     const [progressData, setProgressData] = useState<ProgressData[]>([]);
@@ -101,7 +88,7 @@
             <Tooltip
               contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px' }}
               itemStyle={{ color: '#333' }}
-              formatter={(value: any) => [`${value} pages`, 'Pages Read']}
+              formatter={(value: number) => [`${value} pages`, 'Pages Read']}
               labelFormatter={(label) => `Date: ${label}`}
             />
             <Line

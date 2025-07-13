@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setProgress } from './progressSlice';
-import { progressSync, ProgressUpdateMessage } from './crossTabSync';
+import { progressSync, ProgressUpdateMessage, ProgressSyncMessage, ProgressSyncResponse } from './crossTabSync';
 
 export function useCrossTabSync() {
   const dispatch = useDispatch();
 
   useEffect(() => {
     // Listen for progress updates from other tabs
-    progressSync.onMessage((message: ProgressUpdateMessage) => {
+    progressSync.onMessage((message: ProgressUpdateMessage | ProgressSyncMessage | ProgressSyncResponse) => {
       console.log('📡 Cross-tab: Received progress update from other tab:', message);
       
       if (message.type === 'PROGRESS_UPDATE') {

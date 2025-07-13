@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
      import { supabase } from './supabase';
+     import type { AppDispatch } from './store';
 
      interface ProgressState {
        progress: { [bookId: string]: number };
@@ -83,7 +84,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
      }
 
      // Async function to load progress from Supabase
-     export const loadProgressFromSupabase = () => async (dispatch: any) => {
+     export const loadProgressFromSupabase = () => async (dispatch: AppDispatch) => {
        console.log('🔄 Loading progress from Supabase...');
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) {

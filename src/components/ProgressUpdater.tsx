@@ -1,6 +1,6 @@
 'use client';
   import { useDispatch, useSelector } from 'react-redux';
-  import { updateProgress, setProgress } from '@/lib/progressSlice';
+  import { setProgress } from '@/lib/progressSlice';
   import { RootState } from '@/lib/store';
   import { useState, useEffect } from 'react';
   import { supabase } from '@/lib/supabase';

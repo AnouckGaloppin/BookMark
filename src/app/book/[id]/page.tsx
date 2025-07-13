@@ -1,5 +1,5 @@
 'use client';
-     import { useEffect, useState, use } from 'react';
+     import { useEffect, useState, use, useRef } from 'react';
      import { useDispatch } from 'react-redux';
      import { supabase } from '@/lib/supabase';
      import ProgressChart from '@/components/ProgressChart';
@@ -7,25 +7,16 @@
      import { loadProgressFromSupabase } from '@/lib/progressSlice';
      import { AppDispatch } from '@/lib/store';
      import { useCrossTabSync } from '@/lib/useCrossTabSync';
-
-     interface BookPayload {
-       new: {
-         id: string;
-         title: string;
-         author: string;
-         user_id: string;
-         cover_image: string | null;
-         total_pages: number;
-         isbn: string | null;
-       };
-     }
+     import { Book, BookSubscription } from '@/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 
 
      export default function BookDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [book, setBook] = useState<any>(null);
+  const [book, setBook] = useState<Book | null>();
   const [error, setError] = useState<string | null>(null);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   
@@ -56,9 +47,6 @@
 
        // Real-time book subscription only (progress handled by cross-tab sync)
        useEffect(() => {
-         let bookSubscription: any = null;
-         let isSubscribed = false;
-
          const setupBookSubscription = async () => {
            try {
              const { data: { user } } = await supabase.auth.getUser();
@@ -70,22 +58,22 @@
              console.log('Setting up book subscription for book:', id);
 
              // Book subscription only - progress is handled by cross-tab sync
-             bookSubscription = supabase
+             subscriptionRef.current = (supabase as any)
                .channel(`book-${id}`)
                .on(
                  'postgres_changes',
                  { event: 'UPDATE', schema: 'public', table: 'books', filter: `id=eq.${id}` },
-                 (payload: BookPayload) => {
+                 (payload: BookSubscription) => {
                    console.log('Book updated:', payload.new);
                    setBook(payload.new);
                  }
                )
-               .subscribe((status) => {
+               .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
                  console.log('Book subscription status:', status);
-                 if (status === 'SUBSCRIBED') {
-                   isSubscribed = true;
-                 } else {
+                 if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
                    console.error('Failed to subscribe to book updates:', status);
+                 } else if (status === 'CLOSED') {
+                   console.log('Book subscription closed normally');
                  }
                });
 
@@ -102,10 +90,11 @@
          // Cleanup subscription on unmount
          return () => {
            clearTimeout(timer);
-           if (bookSubscription && isSubscribed) {
+           if (subscriptionRef.current) {
              try {
                console.log('Cleaning up book subscription');
-               supabase.removeChannel(bookSubscription);
+               supabase.removeChannel(subscriptionRef.current);
+               subscriptionRef.current = null;
              } catch (error) {
                console.log('Error during subscription cleanup:', error);
              }
@@ -141,7 +130,7 @@
                  <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">{book.title}</h1>
                  {book.author && <p className="text-gray-600 text-lg mb-2 text-center md:text-left">by {book.author}</p>}
                  <div className="mt-2 max-w-xs w-full">
-                   <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
+                   <ProgressUpdater bookId={book.id} totalPages={book.total_pages ?? 0} />
                  </div>
                </div>
                {/* Right: Reading Progress Chart */}

@@ -9,6 +9,8 @@
      import { useCrossTabSync } from '@/lib/useCrossTabSync';
      import { toast } from 'sonner';
      import { Trash } from 'lucide-react';
+     import { Book } from '@/types';
+     import type { BookSubscription } from '@/types';
 
      interface BookPayload {
        new: {
@@ -28,7 +30,7 @@
 
      export default function BooksPage() {
   const { session, loading } = useAuth();
-  const [books, setBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingBooks, setLoadingBooks] = useState(false);
 
@@ -48,7 +50,7 @@
        useEffect(() => {
          if (!session?.user?.id) return;
 
-         const booksSubscription = supabase
+         const booksSubscription = (supabase as any)
            .channel('public:books')
            .on(
              'postgres_changes',
@@ -71,12 +73,12 @@
            .on(
              'postgres_changes',
              { event: 'DELETE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
-             (payload: any) => {
+             (payload: BookSubscription) => {
                console.log('Book deleted:', payload.old);
-               setBooks((prev) => prev.filter((book) => book.id !== payload.old.id));
+               setBooks((prev) => prev.filter((book) => book.id !== payload.old?.id));
              }
            )
-           .subscribe((status) => {
+           .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
              console.log('Books subscription status:', status);
              if (status !== 'SUBSCRIBED') {
                setError('Failed to subscribe to books updates');
@@ -184,7 +186,7 @@
                        )}
                        {/* Optionally add ISBN/pages here if desired */}
                      </div>
-                     <ProgressUpdater bookId={book.id} totalPages={book.total_pages} />
+                     <ProgressUpdater bookId={book.id} totalPages={book.total_pages ?? 0} />
                      <a
                        href={`/book/${book.id}`}
                        className="mt-2 bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700 transition-colors text-xs text-center inline-block w-full"

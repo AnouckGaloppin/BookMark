@@ -13,7 +13,7 @@ export class CrossTabSync {
   }
 
   // Send a message to other tabs
-  send(message: any) {
+  send(message: ProgressUpdateMessage | ProgressSyncMessage | ProgressSyncResponse) {
     this.channel.postMessage({
       ...message,
       tabId: this.tabId,
@@ -22,7 +22,7 @@ export class CrossTabSync {
   }
 
   // Listen for messages from other tabs
-  onMessage(callback: (message: any) => void) {
+  onMessage(callback: (message: ProgressUpdateMessage | ProgressSyncMessage | ProgressSyncResponse) => void) {
     this.channel.onmessage = (event) => {
       const message = event.data;
       // Ignore messages from the same tab

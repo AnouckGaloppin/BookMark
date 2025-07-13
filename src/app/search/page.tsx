@@ -1,14 +1,16 @@
 'use client';
   import { useState, useEffect } from 'react';
-  import { useRouter } from 'next/navigation';
-  import { supabase } from '@/lib/supabase';
-  import { useAuth } from '@/lib/auth';
-  import { useDispatch, useSelector } from 'react-redux';
-  import { updateProgress as updateProgressAction, loadProgressFromSupabase } from '@/lib/progressSlice';
-  import { RootState } from '@/lib/store';
-  import ProgressUpdater from '@/components/ProgressUpdater';
-  import { useCrossTabSync } from '@/lib/useCrossTabSync';
-import { PostgrestError } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
+import { useDispatch } from 'react-redux';
+import { loadProgressFromSupabase } from '@/lib/progressSlice';
+import type { Book, Results } from '@/types';
+// import { RootState } from '@/lib/store';
+// import ProgressUpdater from '@/components/ProgressUpdater';
+import { useCrossTabSync } from '@/lib/useCrossTabSync';
+// import { PostgrestError } from '@supabase/supabase-js';
 import { toast } from "sonner";
 
 // Define payload types for Realtime
@@ -28,10 +30,10 @@ export default function SearchPage() {
   const router = useRouter();
   const { session } = useAuth();
   const dispatch = useDispatch();
-  const progress = useSelector((state: RootState) => state.progress.progress);
+  // const progress = useSelector((state: RootState) => state.progress.progress);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
-  const [userBooks, setUserBooks] = useState<any[]>([]);
+  const [results, setResults] = useState<Results[]>([]);
+  const [userBooks, setUserBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -133,11 +135,16 @@ export default function SearchPage() {
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    const booksSubscription = supabase
+    const booksSubscription = (supabase as any)
       .channel('public:books')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'books',
+          filter: `user_id=eq.${session.user.id}`
+        },
         (payload: BookPayload) => {
           console.log('🎉 SUBSCRIPTION: New book inserted:', payload.new);
           setUserBooks((prev) => {
@@ -149,7 +156,12 @@ export default function SearchPage() {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'books',
+          filter: `user_id=eq.${session.user.id}`
+        },
         (payload: BookPayload) => {
           console.log('Book updated:', payload.new);
           setUserBooks((prev) =>
@@ -159,13 +171,18 @@ export default function SearchPage() {
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'books', filter: `user_id=eq.${session.user.id}` },
-        (payload: any) => {
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'books',
+          filter: `user_id=eq.${session.user.id}`
+        },
+        (payload: { old: Book }) => {
           console.log('Book deleted:', payload.old);
-          setUserBooks((prev) => prev.filter((book) => book.id !== payload.old.id));
+          setUserBooks((prev) => prev.filter((book) => book.id !== payload.old?.id));
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
         console.log('Books subscription status:', status);
         if (status !== 'SUBSCRIBED') {
           setError('Failed to subscribe to books updates');
@@ -196,9 +213,9 @@ export default function SearchPage() {
     return () => {
       supabase.removeChannel(booksSubscription);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, dispatch]);
 
-  const addBook = async (book: any) => {
+  const addBook = async (book: Results) => {
     if (!session?.user) {
       setError('Please log in to add books.');
       return;
@@ -232,16 +249,7 @@ export default function SearchPage() {
     }
   };
 
-  // Remove book handler
-  const handleRemoveBook = async (bookId: string) => {
-    const { error } = await supabase.from('books').delete().eq('id', bookId);
-    if (!error) {
-      setUserBooks((prev) => prev.filter((book) => book.id !== bookId));
-      toast('Book removed!');
-    } else {
-      toast('Failed to remove book', { description: error.message });
-    }
-  };
+  // Remove book handler (not used, so removed)
 
 
   return (
@@ -264,7 +272,13 @@ export default function SearchPage() {
               <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 max-w-64 flex flex-col h-96">
                 {book.cover ? (
                   <div className="flex-[3] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                    <img src={book.cover} alt={`Cover of ${book.title}`} className="max-h-full max-w-full object-contain" />
+                    <Image 
+                      src={book.cover} 
+                      alt={`Cover of ${book.title}`} 
+                      width={200}
+                      height={300}
+                      className="max-h-full max-w-full object-contain" 
+                    />
                   </div>
                 ) : (
                   <div className="flex-[3] w-full bg-gray-100 flex items-center justify-center">
@@ -276,7 +290,9 @@ export default function SearchPage() {
                     <h2 className="text-base font-semibold text-gray-900 mb-0.5 line-clamp-2">{book.title}</h2>
                     <p className="text-gray-600 text-xs mb-0">by {book.author}</p>
                     {book.isbn && <p className="text-gray-500 text-xs mb-0">ISBN: {book.isbn}</p>}
-                    {book.total_pages > 0 && <p className="text-gray-500 text-xs mb-0">Pages: {book.total_pages}</p>}
+                    {typeof book.total_pages === 'number' && book.total_pages > 0 && (
+                      <p className="text-gray-500 text-xs mb-0">Pages: {book.total_pages}</p>
+                    )}
                   </div>
                   <button
                     onClick={() => addBook(book)}
@@ -303,7 +319,7 @@ export default function SearchPage() {
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${currentSlide * (100 / 5)}%)` }}
                 >
-                  {userBooks.map((book, index) => (
+                  {userBooks.map((book) => (
                     <div key={book.id} className="w-1/5 flex-shrink-0 px-1 relative">
                       <button
                         onClick={() => router.push(`/book/${book.id}`)}
@@ -311,9 +327,11 @@ export default function SearchPage() {
                       >
                         {book.cover_image ? (
                           <div className="aspect-[3/4] overflow-hidden bg-gray-100 flex items-center justify-center">
-                            <img 
+                            <Image 
                               src={book.cover_image} 
                               alt={`Cover of ${book.title}`} 
+                              width={144}
+                              height={192}
                               className="w-full h-full object-contain" 
                             />
                           </div>

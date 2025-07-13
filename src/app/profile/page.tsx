@@ -24,20 +24,20 @@ interface Book {
   activity_type?: 'reading' | 'added';
 }
 
-interface ReadingProgress {
-  pages_read: number;
-  updated_at: string;
-}
+// interface ReadingProgress {
+//   pages_read: number;
+//   updated_at: string;
+// }
 
-interface BookWithProgress {
-  id: string;
-  title: string;
-  author: string;
-  cover_image: string | null;
-  total_pages: number;
-  updated_at: string;
-  reading_progress: ReadingProgress[];
-}
+// interface BookWithProgress {
+//   id: string;
+//   title: string;
+//   author: string;
+//   cover_image: string | null;
+//   total_pages: number;
+//   updated_at: string;
+//   reading_progress: ReadingProgress[];
+// }
 
 export default function ProfilePage() {
   const { session, loading } = useAuth();
@@ -160,6 +160,7 @@ export default function ProfilePage() {
         setTimeout(() => setMessage(null), 3000);
       }
     } catch (err) {
+      console.error('Error updating username:', err);
       setError('Failed to update username');
     }
   };
@@ -185,6 +186,7 @@ export default function ProfilePage() {
         setTimeout(() => setMessage(null), 5000);
       }
     } catch (err) {
+      console.error('Error updating email:', err);
       setError('Failed to update email');
     }
   };
@@ -220,6 +222,7 @@ export default function ProfilePage() {
         setTimeout(() => setMessage(null), 3000);
       }
     } catch (err) {
+      console.error('Error updating password:', err);
       setError('Failed to update password');
     }
   };

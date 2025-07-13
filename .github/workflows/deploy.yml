@@ -25,3 +25,5 @@ jobs:
           docker-compose up -d --build
           docker system prune -f
           echo "BookMark deployed successfully on port 3001" 
+        timeout: 1800  # 1800 seconds = 30 minutes
+        command_timeout: 1800
