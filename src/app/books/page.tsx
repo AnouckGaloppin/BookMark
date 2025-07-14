@@ -152,10 +152,10 @@
              <a href="/add-book" className="mb-6 inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">Add book</a>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-center sm:justify-items-start justify-center sm:justify-start">
                {books.map((book) => (
-                 <a
+                 <div
                    key={book.id}
-                   href={`/book/${book.id}`}
                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-64 h-96 flex flex-col relative cursor-pointer"
+                   onClick={() => window.location.href = `/book/${book.id}`}
                  >
                    {/* Remove button */}
                    <button
@@ -165,7 +165,7 @@
                        e.stopPropagation();
                        handleRemoveBook(book.id);
                      }}
-                     className="absolute top-2 right-2 z-10 bg-indigo-600 text-white rounded-full p-2 w-9 h-9 flex items-center justify-center shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                     className="absolute top-2 right-2 z-10 bg-indigo-600 text-white rounded-full p-2 w-9 h-9 flex items-center justify-center shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 pointer-events-auto"
                      title="Remove book"
                    >
                      <Trash size={20} />
@@ -194,10 +194,12 @@
                        )}
                        {/* Optionally add ISBN/pages here if desired */}
                      </div>
-                     <ProgressUpdater bookId={book.id} totalPages={book.total_pages ?? 0} />
+                     <div className="pointer-events-auto">
+                       <ProgressUpdater bookId={book.id} totalPages={book.total_pages ?? 0} />
+                     </div>
+                                        </div>
                    </div>
-                 </a>
-               ))}
+                 ))}
              </div>
            </div>
          </div>

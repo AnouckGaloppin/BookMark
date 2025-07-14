@@ -65,7 +65,7 @@ export default function SearchPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/openlibrary/search.json?q=${encodeURIComponent(query)}&limit=10`);
+        const response = await fetch(`/api/openlibrary/search.json?q=${encodeURIComponent(query)}&limit=12`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         console.log('Search API response:', data);

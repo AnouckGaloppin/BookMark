@@ -108,14 +108,16 @@
     };
 
     return (
-      <div className="p-4 bg-white rounded-lg shadow-md">
+      <div 
+        className="p-4 bg-white rounded-lg shadow-md"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <label className="block text-sm font-medium text-gray-700">Pages Read</label>
         <input
           type="number"
           value={pages === 0 ? '' : pages}
           onChange={handleProgressChange}
-          onClick={(e) => e.stopPropagation()}
-          onFocus={(e) => e.stopPropagation()}
           className={`mt-1 block w-full rounded-md shadow-sm focus:ring focus:ring-indigo-200 ${
             error ? 'border-red-300 focus:border-red-300' : 'border-gray-300 focus:border-indigo-300'
           }`}
@@ -144,14 +146,16 @@
           </button>
         </div>
         {editingTotalPages && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div 
+            className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <label className="block text-sm font-medium text-gray-700 mb-1">Update Total Pages</label>
             <input
               type="number"
               value={localTotalPages || ''}
               onChange={handleTotalPagesChange}
-              onClick={(e) => e.stopPropagation()}
-              onFocus={(e) => e.stopPropagation()}
               className="w-full min-w-[120px] mb-3 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               min={pages}
               placeholder="Total pages"
